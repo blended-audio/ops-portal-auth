@@ -1,84 +1,183 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Sign in</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blended Audio - Sign in</title>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     body {
-      font-family: Arial;
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f7f2ea;
+      color: #2f2a24;
+      display: flex;
+      min-height: 100vh;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      width: 100%;
+      max-width: 420px;
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 18px 40px rgba(0,0,0,.14);
+      padding: 28px;
+      text-align: center;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      background: #f3e7d7;
+      color: #7a5c2d;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      line-height: 1.2;
+    }
+    p {
+      margin: 0 0 18px;
+      color: #6b5f53;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    #googleBtn {
       display: flex;
       justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-      background: #f5f5f5;
+      margin: 18px 0;
+      min-height: 44px;
     }
-    #btn {
-      margin-top: 20px;
+    .status {
+      display: none;
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      line-height: 1.45;
+      text-align: left;
+    }
+    .status.show { display: block; }
+    .status.info { background: #eef4ff; color: #244a87; }
+    .status.error { background: #fff0ef; color: #9c2f24; }
+    .actions {
+      margin-top: 18px;
+      display: flex;
+      justify-content: center;
+    }
+    button.link {
+      border: none;
+      background: none;
+      color: #7a5c2d;
+      font-weight: 700;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
+  <div class="card">
+    <div class="badge">Blended Audio</div>
+    <h1>Sign in with Google</h1>
+    <p>Use your registered Google account.</p>
+    <div id="googleBtn"></div>
+    <div id="status" class="status info"></div>
+    <div class="actions">
+      <button class="link" onclick="window.close()">Cancel</button>
+    </div>
+  </div>
 
-<div>
-  <h3>Sign in with Google</h3>
-  <div id="btn"></div>
-</div>
+  <script>
+    const GOOGLE_CLIENT_ID = '451236465638-415dgnkapcirh2pcapcsi5fjsl4qupi6.apps.googleusercontent.com';
 
-<script>
-const CLIENT_ID = '451236465638-415dgnkapcirh2pcapcsi5fjsl4qupi6.apps.googleusercontent.com';
-
-function handleCredentialResponse(response) {
-  if (!response || !response.credential) return;
-
-  if (window.opener) {
-    window.opener.postMessage({
-      credential: response.credential
-    }, '*');
-  }
-
-  window.close();
-}
-
-function initGoogle() {
-  google.accounts.id.initialize({
-    client_id: CLIENT_ID,
-    callback: handleCredentialResponse,
-    auto_select: true
-  });
-
-  // 🔥 ALWAYS render button (fix)
-  google.accounts.id.renderButton(
-    document.getElementById("btn"),
-    {
-      theme: "outline",
-      size: "large"
-    }
-  );
-
-  // optional auto prompt
-  google.accounts.id.prompt();
-}
-
-function waitForGoogle() {
-  let tries = 0;
-
-  const interval = setInterval(() => {
-    if (window.google && google.accounts && google.accounts.id) {
-      clearInterval(interval);
-      initGoogle();
+    function setStatus(message, kind) {
+      const el = document.getElementById('status');
+      if (!message) {
+        el.textContent = '';
+        el.className = 'status info';
+        return;
+      }
+      el.textContent = message;
+      el.className = 'status show ' + (kind || 'info');
     }
 
-    if (++tries > 50) {
-      clearInterval(interval);
-      document.body.innerHTML = "Google failed to load.";
+    function handleCredentialResponse(response) {
+      if (!response || !response.credential) {
+        setStatus('Google did not return a credential.', 'error');
+        return;
+      }
+
+      if (!window.opener) {
+        setStatus('No parent portal window found.', 'error');
+        return;
+      }
+
+      window.opener.postMessage(
+        { credential: response.credential },
+        '*'
+      );
+
+      window.close();
     }
-  }, 100);
-}
 
-window.onload = waitForGoogle;
-</script>
+    function initGoogle() {
+      if (!(window.google && google.accounts && google.accounts.id)) {
+        setStatus('Google sign-in library not available.', 'error');
+        return;
+      }
 
+      google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleCredentialResponse,
+        auto_select: true
+      });
+
+      google.accounts.id.renderButton(
+        document.getElementById('googleBtn'),
+        {
+          theme: 'outline',
+          size: 'large',
+          text: 'signin_with',
+          shape: 'rectangular',
+          width: 320
+        }
+      );
+
+      try {
+        google.accounts.id.prompt(function(notification) {
+          if (notification && notification.isNotDisplayed && notification.isNotDisplayed()) {
+            setStatus('Google did not auto-open here. Use the button above.', 'info');
+          }
+        });
+      } catch (err) {
+        setStatus('Use the button above to continue.', 'info');
+      }
+    }
+
+    function waitForGoogle() {
+      let tries = 0;
+      const timer = setInterval(function() {
+        tries += 1;
+
+        if (window.google && google.accounts && google.accounts.id) {
+          clearInterval(timer);
+          initGoogle();
+          return;
+        }
+
+        if (tries > 100) {
+          clearInterval(timer);
+          setStatus('Google sign-in library did not load.', 'error');
+        }
+      }, 100);
+    }
+
+    window.addEventListener('load', waitForGoogle);
+  </script>
 </body>
 </html>
