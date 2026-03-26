@@ -1,14 +1,33 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8">
-  <title>Blended Audio - Sign in</title>
+  <title>Sign in</title>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    body {
+      font-family: Arial;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background: #f5f5f5;
+    }
+    #btn {
+      margin-top: 20px;
+    }
+  </style>
 </head>
 <body>
 
+<div>
+  <h3>Sign in with Google</h3>
+  <div id="btn"></div>
+</div>
+
 <script>
-const GOOGLE_CLIENT_ID = '451236465638-415dgnkapcirh2pcapcsi5fjsl4qupi6.apps.googleusercontent.com';
+const CLIENT_ID = '451236465638-415dgnkapcirh2pcapcsi5fjsl4qupi6.apps.googleusercontent.com';
 
 function handleCredentialResponse(response) {
   if (!response || !response.credential) return;
@@ -24,24 +43,41 @@ function handleCredentialResponse(response) {
 
 function initGoogle() {
   google.accounts.id.initialize({
-    client_id: GOOGLE_CLIENT_ID,
+    client_id: CLIENT_ID,
     callback: handleCredentialResponse,
     auto_select: true
   });
 
+  // 🔥 ALWAYS render button (fix)
+  google.accounts.id.renderButton(
+    document.getElementById("btn"),
+    {
+      theme: "outline",
+      size: "large"
+    }
+  );
+
+  // optional auto prompt
   google.accounts.id.prompt();
 }
 
-window.onload = function() {
+function waitForGoogle() {
   let tries = 0;
+
   const interval = setInterval(() => {
     if (window.google && google.accounts && google.accounts.id) {
       clearInterval(interval);
       initGoogle();
     }
-    if (++tries > 50) clearInterval(interval);
+
+    if (++tries > 50) {
+      clearInterval(interval);
+      document.body.innerHTML = "Google failed to load.";
+    }
   }, 100);
-};
+}
+
+window.onload = waitForGoogle;
 </script>
 
 </body>
