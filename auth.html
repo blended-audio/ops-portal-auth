@@ -5,7 +5,6 @@
   <title>Blended Audio - Sign in</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-
   <style>
     body {
       margin: 0;
@@ -14,57 +13,68 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 100vh;
+      min-height: 100vh;
+      padding: 24px;
+      box-sizing: border-box;
     }
-
     .card {
       background: #fff;
       padding: 28px;
       border-radius: 18px;
       box-shadow: 0 18px 40px rgba(0,0,0,.14);
       text-align: center;
-      width: 360px;
+      width: 100%;
+      max-width: 380px;
     }
-
     h1 {
       margin: 0 0 10px;
       font-size: 22px;
+      color: #2f2a24;
     }
-
     p {
+      margin: 0 0 18px;
       font-size: 14px;
       color: #6b5f53;
+      line-height: 1.5;
     }
-
     #googleBtn {
       margin-top: 20px;
       display: flex;
       justify-content: center;
+      min-height: 44px;
     }
-
     .status {
       margin-top: 15px;
       font-size: 13px;
       color: #555;
+      min-height: 18px;
     }
   </style>
 </head>
-
 <body>
-
   <div class="card">
     <h1>Sign in with Google</h1>
-    <p>Use your registered Google account</p>
-
+    <p>Use your registered Google account.</p>
     <div id="googleBtn"></div>
     <div id="status" class="status"></div>
   </div>
 
   <script>
     const GOOGLE_CLIENT_ID = '451236465638-415dgnkapcirh2pcapcsi5fjsl4qupi6.apps.googleusercontent.com';
+    const MESSAGE_TYPE = 'ba_ops_google_credential';
+    const params = new URLSearchParams(window.location.search);
+    const nonce = params.get('nonce') || '';
 
     function setStatus(msg) {
       document.getElementById('status').innerText = msg || '';
+    }
+
+    function postToOpener(payload) {
+      if (!window.opener) {
+        setStatus('No parent portal window found.');
+        return;
+      }
+      window.opener.postMessage(payload, '*');
     }
 
     function handleCredentialResponse(response) {
@@ -73,11 +83,11 @@
         return;
       }
 
-      if (window.opener) {
-        window.opener.postMessage({
-          credential: response.credential
-        }, '*');
-      }
+      postToOpener({
+        type: MESSAGE_TYPE,
+        nonce: nonce,
+        credential: response.credential
+      });
 
       window.close();
     }
@@ -94,27 +104,26 @@
         auto_select: true
       });
 
-      // 🔥 ALWAYS render button (prevents blank screen)
       google.accounts.id.renderButton(
         document.getElementById('googleBtn'),
         {
           theme: 'outline',
           size: 'large',
+          text: 'signin_with',
+          shape: 'rectangular',
           width: 280
         }
       );
 
-      // Try auto sign-in
       try {
         google.accounts.id.prompt();
       } catch (e) {
-        console.log('Prompt failed, fallback to button');
+        console.log('Prompt fallback to button only.');
       }
     }
 
     function waitForGoogle() {
       let tries = 0;
-
       const interval = setInterval(() => {
         if (window.google && google.accounts && google.accounts.id) {
           clearInterval(interval);
@@ -122,7 +131,7 @@
           return;
         }
 
-        if (++tries > 50) {
+        if (++tries > 100) {
           clearInterval(interval);
           setStatus('Google script failed to load.');
         }
@@ -131,6 +140,5 @@
 
     window.onload = waitForGoogle;
   </script>
-
 </body>
 </html>
