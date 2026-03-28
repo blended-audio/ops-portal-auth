@@ -104,6 +104,7 @@
     const MESSAGE_TYPE = 'ba_ops_google_credential';
     const params = new URLSearchParams(window.location.search);
     const nonce = params.get('nonce') || '';
+    const parentOrigin = params.get('parentOrigin') || '*';
 
     function setStatus(msg) {
       document.getElementById('status').innerText = msg || '';
@@ -114,7 +115,7 @@
         setStatus('No parent portal window found.');
         return;
       }
-      window.opener.postMessage(payload, '*');
+      window.opener.postMessage(payload, parentOrigin || '*');
     }
 
     function handleCredentialResponse(response) {
