@@ -68,7 +68,10 @@
   // Only ever post back to a Google Apps Script origin. A page that posted a
   // token to any origin handed to it in the address bar would be a way to
   // harvest tokens, so the allowed shape is pinned here.
-  if (!/^https:\/\/[a-z0-9-]+\.googleusercontent\.com$/.test(target) &&
+  // Apps Script serves its pages from a long random host under
+  // googleusercontent.com, which can carry dots as well as hyphens. Anything
+  // outside Google's own domains is refused and nothing is sent.
+  if (!/^https:\/\/[a-z0-9.-]+\.googleusercontent\.com$/.test(target) &&
       !/^https:\/\/script\.google\.com$/.test(target)) {
     fail('That portal address is not recognised. Nothing was sent.');
     return;
