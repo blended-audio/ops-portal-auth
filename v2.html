@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in - OPS Portal</title>
+<!--
+  OPS PORTAL V2 - sign-in page
+  Created 7 September 2026.
+
+  WHY THIS PAGE EXISTS AT ALL
+  Google's sign-in refuses to run inside an Apps Script page, because Apps Script
+  serves its pages from a sandbox that Google will not accept as a first-party
+  origin. So the sign-in has to happen on an ordinary web page that we control,
+  in a popup, which then hands the result back.
+
+  DO NOT TOUCH auth.html IN THIS SAME REPO. That one belongs to OPS Portal V1
+  and uses a different client id. Breaking it takes the live portal's login down.
+
+  WHAT HAPPENS
+  1. The portal opens this page in a popup, passing a one-time nonce and its own
+     origin in the address.
+  2. Google signs the person in and hands back an identity token. The nonce is
+     baked INTO that token by Google, so the portal can later prove the token was
+     issued for this exact request and not replayed from somewhere else.
+  3. This page posts the token back to the portal and closes.
+
+  This page never sees a password and never stores anything.
+-->
+<style>
+  html,body { margin:0; padding:0; height:100%; background:#1a1816; color:#ece7df;
+              font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  .wrap { display:flex; flex-direction:column; align-items:center; justify-content:center;
+          height:100%; padding:24px; box-sizing:border-box; text-align:center; }
+  h1 { font-size:15px; letter-spacing:.08em; color:#f2b680; margin:0 0 6px 0; font-weight:600; }
+  p  { font-size:12px; color:#a09890; margin:0 0 26px 0; max-width:280px; line-height:1.5; }
+  #err { color:#E24B4A; font-size:12px; margin-top:18px; max-width:300px; line-height:1.5; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>OPS PORTAL</h1>
+  <p>Choose the Google account you use for the portal.</p>
+  <div id="btn"></div>
+  <div id="err"></div>
+</div>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+(function () {
+  var CLIENT_ID = '294357610001-me215me700nhsrt20h1ant1qg2djjpiq.apps.googleusercontent.com';
+
+  function qs(name) {
+    var m = new RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+
+  var nonce  = qs('nonce');
+  var target = qs('origin');
+
+  function fail(msg) { document.getElementById('err').textContent = msg; }
+
+  if (!nonce || !target) {
+    fail('This page was opened directly. Open the portal and sign in from there.');
+    return;
+  }
+
+  // Only ever post back to a Google Apps Script origin. A page that posted a
+  // token to any origin handed to it in the address bar would be a way to
+  // harvest tokens, so the allowed shape is pinned here.
+  if (!/^https:\/\/[a-z0-9-]+\.googleusercontent\.com$/.test(target) &&
+      !/^https:\/\/script\.google\.com$/.test(target)) {
+    fail('That portal address is not recognised. Nothing was sent.');
+    return;
+  }
+
+  function onCredential(resp) {
+    if (!resp || !resp.credential) { fail('Google did not return a sign-in. Try again.'); return; }
+    window.opener && window.opener.postMessage({
+      source: 'ops-portal-v2-auth',
+      nonce: nonce,
+      credential: resp.credential
+    }, target);
+    window.close();
+  }
+
+  var tries = 0;
+  (function start() {
+    if (!window.google || !google.accounts || !google.accounts.id) {
+      if (++tries > 60) { fail('Could not reach Google sign-in. Check your connection and try again.'); return; }
+      return setTimeout(start, 100);
+    }
+    google.accounts.id.initialize({
+      client_id: CLIENT_ID,
+      callback: onCredential,
+      nonce: nonce,
+      auto_select: false,
+      cancel_on_tap_outside: false
+    });
+    google.accounts.id.renderButton(document.getElementById('btn'), {
+      theme: 'filled_black', size: 'large', text: 'signin_with', shape: 'pill', width: 260
+    });
+  })();
+})();
+</script>
+</body>
+</html>
