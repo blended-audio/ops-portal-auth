@@ -37,11 +37,18 @@
      when it opens the window. Dark is the default AND the fallback: anything
      other than the exact string "light" lands here. The values match the
      portal's own gate, so the popup and the card behind it agree. */
-  :root, :root[data-theme="dark"] { color-scheme:dark;
+  /* NO color-scheme HERE, DELIBERATELY. Google renders its button in an iframe.
+     When this document declares a colour scheme the frame does not match, the
+     browser stops giving that frame a transparent canvas and paints an opaque
+     one - so on dark the button appeared as a white slab with shape:pill
+     apparently ignored, because what was visible was the canvas, not the
+     button. The original file had no color-scheme line and worked. Adding one
+     is the bug; do not put it back. */
+  :root, :root[data-theme="dark"] {
     --bg:#12110F; --glow:rgba(242,182,128,.13); --card:#181613; --bdr:#3A332B;
     --shadow:rgba(42,31,21,.65); --txt:#ECE7DF; --sub:#8B8178;
     --errbg:#1F0A0A; --errbdr:#7F1D1D; --errtxt:#FCA5A5; }
-  :root[data-theme="light"] { color-scheme:light;
+  :root[data-theme="light"] {
     --bg:#F5F1EA; --glow:rgba(161,92,19,.10); --card:#FFFFFF; --bdr:#DCD3C6;
     --shadow:rgba(80,60,40,.14); --txt:#2A2521; --sub:#6B6157;
     --errbg:#FDECEC; --errbdr:#F0B4B1; --errtxt:#8C1D18; }
