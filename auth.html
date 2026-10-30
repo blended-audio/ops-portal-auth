@@ -104,18 +104,31 @@
     const MESSAGE_TYPE = 'ba_ops_google_credential';
     const params = new URLSearchParams(window.location.search);
     const nonce = params.get('nonce') || '';
-    const parentOrigin = params.get('parentOrigin') || '*';
+    const parentOrigin = params.get('parentOrigin') || '';
+    const NOT_HERE = 'This sign-in page cannot be used from here.';
+
+    // Only ever post back to a Google Apps Script origin, the same rule as
+    // v2.html. Posting the sign-in to any origin named in the address would
+    // hand it to any site that opened this page. Nothing else is accepted.
+    function isAllowedOrigin(origin) {
+      return /^https:\/\/[a-z0-9.-]+\.googleusercontent\.com$/.test(origin) ||
+        /^https:\/\/script\.google\.com$/.test(origin);
+    }
 
     function setStatus(msg) {
       document.getElementById('status').innerText = msg || '';
     }
 
     function postToOpener(payload) {
+      if (!isAllowedOrigin(parentOrigin)) {
+        setStatus(NOT_HERE);
+        return;
+      }
       if (!window.opener) {
         setStatus('No parent portal window found.');
         return;
       }
-      window.opener.postMessage(payload, parentOrigin || '*');
+      window.opener.postMessage(payload, parentOrigin);
     }
 
     function handleCredentialResponse(response) {
@@ -164,6 +177,10 @@
     }
 
     function waitForGoogle() {
+      if (!isAllowedOrigin(parentOrigin)) {
+        setStatus(NOT_HERE);
+        return;
+      }
       let tries = 0;
       const interval = setInterval(() => {
         if (window.google && google.accounts && google.accounts.id) {
